@@ -1,0 +1,233 @@
+#include "Adafruit_TCS34725.h"
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_2_4MS, 
+TCS34725_GAIN_16X);
+int enB = 5; // Defining an integer variable with the value 5 
+int in4 = 4; // Defining an integer variable with the value 4
+int in3 = 3; // Defining an integer variable with the value 3
+int enA = 6; // Defining an integer variable with the value 6
+int in2 = 7; //Defining an integer variable with the value 7 
+int in1 =8 // Defining an integer variable with the value 8
+int Speed = 200; // Defining an integer variable with the value 200
+int trig = 10; // Defining an integer variable with the value 10 
+int echo = 11; // Defining an integer variable with the value 11
+int sBlue = 9; // Defining an integer variable with the value 9 
+int sRed = 12; // Defining an integer variable with the value 12 
+int sGreen = 13; // Defining an integer variable with the value 13 
+void setup() {
+ pinMode(sRed, OUTPUT);// Definition of terminal 12 in Arduino as an output
+ pinMode(sBlue, OUTPUT); // Definition of terminal 9 in Arduino as an
+//output 
+ pinMode(sGreen, OUTPUT); // Definition of terminal 13 in Arduino as an 
+//output 
+PinMode(enB, OUTPUT); // Definition of terminal 5 in Arduino as an output
+ pinMode(in4, OUTPUT);// // Definition of terminal 4 in Arduino as an output
+ pinMode(in3, OUTPUT); // Definition of terminal 3 in Arduino as an output
+ pinMode(enA, OUTPUT); // Definition of terminal 6 in Arduino as an output
+ pinMode(in2, OUTPUT); //// Definition of terminal 7 in Arduino as an output
+ pinMode(in1, OUTPUT); // Definition of terminal 8 in Arduino as an output
+ pinMode(trig, OUTPUT); // Setting the trigger terminal in the distance sensor as the 
+//output
+ pinMode(echo, INPUT); // Setting the echo trigger in the distance sensor as an input
+ Serial.begin(9600);
+ if (tcs.begin()) {
+ Serial.println("Found sensor");
+ } else {
+ Serial.println("No TCS34725 found ... check your connections");
+ while (1);
+}
+int RED = 1;
+int BLUE = 2;
+int GREEN = 3;
+int NOCOLOR = 4;
+int getColor() {
+ uint16_t r, g, b, c, colorTemp, lux; // Defining 1 6 bytes -size variables
+ tcs.getRawData(&r, &g, &b, &c); // A function that calculates the appropriate color 
+//according to the values obtained from the sensor
+ colorTemp = tcs.calculateColorTemperature_dn40(r, g, b, c);
+ lux = tcs.calculateLux(r, g, b);
+ int sum = r + g + b;
+ sum = sum / 2;
+ if (sum < r)
+ return RED;
+ else if (sum < g)
+ return GREEN;
+ else if (sum < b)
+ return BLUE;
+ else return NOCOLOR; 
+}
+void setColor(int color)
+{
+ if (color == RED) // If the color is red, that is equal to the digit 1
+{
+ digitalWrite(sRed, HIGH);// Light a red color
+ digitalWrite(sGreen, LOW);// Turn off green
+ digitalWrite(sBlue, LOW);// Turn off blue
+ }
+ if (color == GREEN) // If the color is green, that is equal to the digit 3
+{
+ digitalWrite(sRed, LOW);// Turn off red
+ digitalWrite(sGreen, HIGH);// Light a green color
+ digitalWrite(sBlue, LOW);// Turn off blue
+ }
+ if (color == BLUE) // If the color is blue, that is equal to the digit 2
+{
+ digitalWrite(sRed, LOW);// Turn off red
+ digitalWrite(sGreen, LOW);// Turn off green
+ digitalWrite(sBlue, HIGH);// Light a blue color
+ }
+}
+void forward() // a function named Forward, its purpose to move the robot forward
+{
+ motorDirection(Speed, Speed);// sending the Speed value (defined as 200) to another 
+//function. Both values are positive.
+}
+void left() // a function named left, its purpose to move the robot to the left
+{
+ motorDirection(-Speed, Speed); ); // sending the Speed value (defined as 200) to another 
+//function. The first value is negative.
+}
+void right() // a function named right, its purpose to move the robot to the right
+{
+ motorDirection(Speed, -Speed); // sending the Speed value (defined as 200) to another 
+//function. The second value is negative.
+}
+void back() // a function named right, its purpose to move the robot to the right
+{
+motorDirection(-Speed, -Speed); // sending the Speed value (defined above as 200) to 
+//another function. Both values are negative.
+}
+void Stop() // a function named Stop, its purpose to stop the robot's driving
+{
+ digitalWrite(in4, 1); //definition of 4 terminal in Arduino as High state
+ digitalWrite(in3, 1); //definition of 5 terminal in Arduino as High state
+ analogWrite(enB, 255); //definition of 3 analog terminal in Arduino as 255, it means 
+//enable the motor
+ 
+ digitalWrite(in2, 1); //definition of 4 terminal in Arduino as High state
+ digitalWrite(in1, 1); //definition of 4 terminal in Arduino as High state
+ analogWrite(enA, 255); //definition of 3 analog terminal in Arduino as 255, it means 
+//enable the motor
+}
+void loop()
+{
+ setColor(getColor());//adjust the color of the LED strip by the color that received from the 
+//sensor
+ if (analogRead(A1) >= 500)// if the value of the potentiometer is above 500 (autonomic 
+//state)
+ {
+ if( distance() > 25)// if the distance that received from the sensor is above 25
+{
+ if (readIR()) // if the value that received from the Ir sensor is under 600; it means, while 
+//the sensor recognize dark area
+{
+ motorDirection(Speed, -50); // Follow the black route in a left direction
+ }
+ else { // if above 600, it means bright area
+ motorDirection(-50 , Speed); // Follow the black route in a right direction
+ }
+ }
+ Else // if dark area not found at all
+ Stop(); // stop the driving
+ }
+ Else // if the value of the potentiometer is under 500 (half-autonomic state)
+ {
+ char x = Serial.read(); // Defines a variable of a character type that read the data from 
+//the user
+ switch (x) // using a Switch loop to determine the robot's driving direction.
+{
+ case 'S': // if 'S' was chosen, it means stop the driving.
+ {
+ Stop();// stop robot's driving
+ break;// break the loop
+ }
+ case 'L': // if 'L' was chosen, it means turn the robot to the left.
+ {
+ left(); // go to the left
+ break; // break the loop
+ }
+ case 'R': // if 'R' was chosen, it means turn the robot to the right.
+ {
+ right();// go to the right
+ break; // break the loop
+ }
+ case 'B': // if 'B' was chosen, it means drive the robot backwards.
+ {
+ back();// go back
+ break; // break the loop
+ }
+ case 'F': // if 'F' was chosen, it means drive the robot forward.
+ {
+ if (distance() > 25) // if there is'nt an obstacle 
+ forward();// go on forward
+ else // if there is an obstacle
+ Stop();// stop the robot driving
+ break;// break the loop
+ }
+ }
+ }
+}
+void motorDirection(int left, int right)
+// a function named motorDirection that determine //the direction of the robot's driving by 
+the received values: left and right
+{
+//THE LEFT MOTOR:
+ if (left < 0) // if left is negative
+ {
+//determine the motor to spin left
+ digitalWrite(in3, 0); //definition of 3 terminal in Arduino as low state
+ left = left * -1;// absolute the left value
+ analogWrite(enB, left);// determine the motor's speed
+ }
+ else if (left > 0) // if left is'nt negative
+ {
+//determine the motor to spin right
+ digitalWrite(in4, 0); //definition of 4 terminal in Arduino as High state
+ digitalWrite(in3, 1); ); //definition of 3 terminal in Arduino as High state
+ analogWrite(enB, left);// determine the motor's speed
+ }
+ Else
+ {
+ analogWrite(enB, 0);// stop the motor's spinning
+ }
+//THE RIGHT MOTOR:
+ if (right < 0) // if right is negative
+ {
+//determine the motor to spin right
+ digitalWrite(in2, 1); //definition of 2 terminal in Arduino as high state
+ digitalWrite(in1, 0); //definition of 8 terminal in Arduino as low state 
+ analogWrite(enA, -right);// determine the motor's speed
+ }
+ else if (right > 0) // if right is'nt negative
+ {
+ digitalWrite(in2, 0); //definition of 2 terminal in Arduino as low state
+ digitalWrite(in1, 1); //definition of 8 terminal in Arduino as High state 
+analogWrite(enA, right); // determine the motor's speed
+
+ }
+ else
+ {
+ analogWrite(enA, 0);// stop the motor's spinning
+ }
+}
+int readIR() 
+{ // a function named readIR that receive values from the IR sensor and returns true (1) if 
+//dark area was found, else returns false (0)
+ if (analogRead(A0) > 600)// if the value that received from the sensor is above 600
+ return 0;
+ else
+ return 1;
+}
+int distance() // a function named distance that return the distance from the sensor to the 
+//obstacle
+{
+ digitalWrite(trig, HIGH);// putting trig terminal of the sensor in high state
+ delayMicroseconds(10); // Sampling of every 10 microseconds
+ digitalWrite(trig, LOW); );// putting trig terminal of the sensor in low state
+//Calculating the distance by the received values from the sensor:
+ unsigned long time = pulseIn(echo, HIGH);
+ int dist = time / 58;
+
+ if (dist > 100)// if the distance is maximum than
+ return 100;// return the max value
+ return dist;// else, return the calculated distance
+}
